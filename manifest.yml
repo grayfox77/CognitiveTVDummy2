@@ -6,7 +6,6 @@ applications:
   path: .
   memory: 256M
   instances: 1
-  services:
 
   env:
     NPM_CONFIG_PRODUCTION: false

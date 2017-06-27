@@ -5,8 +5,8 @@ applications:
   memory: 256M
   instances: 1
   domain: mybluemix.net
-  name: CognitiveTVDummy2
-  host: CognitiveTVDummy2
+  name: CognitiveVodaTVPOC3
+  host: CognitiveVodaTVPOC3
   disk_quota: 1024M
 
   env:

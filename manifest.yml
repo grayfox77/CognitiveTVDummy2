@@ -1,10 +1,7 @@
 ---
-declared-services:
-  my-conversation-service:
-    label: conversation
-    plan: free
+
 applications:
-- name: conversation-simple
+- name: CognitiveTVDummy2
   command: npm start
   path: .
   memory: 256M

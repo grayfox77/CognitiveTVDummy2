@@ -12,3 +12,4 @@ applications:
   env:
     NPM_CONFIG_PRODUCTION: 'false'
   command: npm start
+            cf logs CognitiveTVDummy2 --recent

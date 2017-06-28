@@ -144,7 +144,16 @@ function orquestador(req, res) {
             var cast = data.context.cast;
             var director = data.context.director;
             var novedades = data.context.novedades;
+
+            if (novedades == process.env.ULTIMAS_NOVEDADES) {
+                novedades = process.env.ULTIMAS_NOVEDADES_VALUE;
+            }
+
             var valoracion = data.context.valoracion;
+
+            if (valoracion == process.env.MEJOR_VALORADAS) {
+                valoracion = process.env.MEJOR_VALORADAS_VALUE;
+            }
 
 
             if (!(title == null)) {
@@ -199,7 +208,7 @@ function orquestador(req, res) {
 
                     parametrosBusqueda = parametrosBusqueda + " AND ";
                 }
-                parametrosBusqueda = parametrosBusqueda + "novedades:" + novedades;
+                parametrosBusqueda = parametrosBusqueda + novedades;
             }
 
             if (!(valoracion == null)) {
@@ -207,7 +216,7 @@ function orquestador(req, res) {
 
                     parametrosBusqueda = parametrosBusqueda + " AND ";
                 }
-                parametrosBusqueda = parametrosBusqueda + "valoracion:" + valoracion;
+                parametrosBusqueda = parametrosBusqueda + valoracion;
             }
 
 
@@ -226,6 +235,7 @@ function orquestador(req, res) {
                     console.log("después");
                     datos.input = entrada.text;
                     datos.output = data.output.text;
+                    datos.llamadaWEX = lanzar_busqueda_wex;
                     datos.context = data.context;
 
                     if (!(datos == null)) {
@@ -262,16 +272,41 @@ function orquestador(req, res) {
 
                             response = response + "<tr><td><strong>respuestas devueltas</strong></td><td width=300>" + datos.es_result.length + "</td></tr>";
                             var listadoTitulos = "";
+                            var idPropiedad;
                             for (var k = 0; k < datos.es_result.length; k++) {
-                                listadoTitulos = listadoTitulos + datos.es_result[k].es_title + "<br>";
+
+                                listadoTitulos = listadoTitulos + datos.es_result[k].es_title + "(";
+
+
+                                buscaPosPropiedad(datos.es_result[k], process.env.RATING_FIELD, function (idPropiedad) {
+                                    if (!(idPropiedad == undefined)) {
+                                        listadoTitulos = listadoTitulos + "rating:" + datos.es_result[k].ibmsc_field[idPropiedad]['#text'];
+                                    }
+                                });
+
+                                var id;
+                                buscaPosPropiedad(datos.es_result[k], process.env.YEAR_FIELD, function (idPropiedad) {
+                                    if (!(idPropiedad == undefined)) {
+                                        listadoTitulos = listadoTitulos + " year:" + datos.es_result[k].ibmsc_field[idPropiedad]['#text'];
+                                    }
+
+                                });
+
+                                var id;
+                                buscaPosPropiedad(datos.es_result[k], process.env.GENRE_FIELD, function (idPropiedad) {
+                                    if (!(idPropiedad == undefined)) {
+                                        listadoTitulos = listadoTitulos + " genre:" + datos.es_result[k].ibmsc_field[idPropiedad]['#text'];
+                                    }
+
+                                });
+
+                                listadoTitulos = listadoTitulos + ") <br>";
                             }
                             response = response + "<tr><td><strong>Títulos devueltos en llamada</strong></td><td width=300><small>" + listadoTitulos + "</small></td></tr>";
-
+                            response = response + "</table>";
+                            response = response + "</BODY > ";
+                            res.send(response);
                         }
-
-                        response = response + "</table>";
-                        response = response + "</BODY > ";
-                        res.send(response);
                     }
                 });
 
@@ -306,6 +341,22 @@ function orquestador(req, res) {
 
 };
 
+
+function buscaPosPropiedad(data, propiedad, callback) {
+
+
+    var id;
+    for (var k = 0; k < data.ibmsc_field.length; k++) {
+
+
+        if (data.ibmsc_field[k]['id'] == propiedad) {
+            id = k;
+
+        }
+    }
+    callback(id);
+
+}
 
 /**
  * Updates the response text using the intent confidence

@@ -1,6 +1,0 @@
-posibles valores:
-
-"CUENTA SELECCIONADA"
-"INSERTAR CUENTA"
-"CONTINUAR MANUAL"
-"TERMINAR" modificado

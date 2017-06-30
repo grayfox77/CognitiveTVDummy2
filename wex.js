@@ -98,12 +98,13 @@ function accessXML(data, callback) {
   }
 }
 
-function request(input, callback) {  // Función que lanza la petición a la url
+function request(input, order, callback) {  // Función que lanza la petición a la url
+
 
   console.log("Función request - Input:", input);
 
-  var url = createURL(input + (' '), input + (' '));
-  console.log("URL", url);
+  var url = createURL(input + (' '), order + (' '));
+  console.log("URL:", url);
   var http = new XMLHttpRequest();
   http.open("GET", url, true);
   http.setRequestHeader("Accept-Language", "es-ES");
@@ -116,7 +117,7 @@ function request(input, callback) {  // Función que lanza la petición a la url
 
       if (data.es_totalResults > 0) {
         console.log("CON RESULTADOS");
-               
+
         // accessXML(data,function(response){
 
         callback(data);
@@ -139,7 +140,7 @@ function createURL(input_and, input_or) { // creacion de URL para WEX, distingui
   var params = 'collection=' + collection + '&output=application/json' + '&query=' + input_and;
 
   //URL: [" + wexURL + '/api/v10/search' + '?' + encodeURI(params) + "]
-  return wexURL + '/api/v10/search' + '?' + encodeURI(params)
+  return wexURL + '/api/v10/search' + '?' + encodeURI(params) + input_or;
 }
 
 function createSummary(summary, id_respuesta) { // Propuesta para la generación de resúmenes

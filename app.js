@@ -40,6 +40,29 @@ var conversation = new Conversation({
     version_date: Conversation.VERSION_DATE_2017_04_21
 });
 
+app.post('/api/message', function (req, res) {
+    var workspace = process.env.WORKSPACE_ID || '<workspace-id>';
+    if (!workspace || workspace === '<workspace-id>') {
+        return res.json({
+            'output': {
+                'text': 'The app has not been configured with a <b>WORKSPACE_ID</b> environment variable. Please refer to the ' + '<a href="https://github.com/watson-developer-cloud/conversation-simple">README</a> documentation on how to set this variable. <br>' + 'Once a workspace has been defined the intents may be imported from ' + '<a href="https://github.com/watson-developer-cloud/conversation-simple/blob/master/training/car_workspace.json">here</a> in order to get a working application.'
+            }
+        });
+    }
+    var payload = {
+        workspace_id: workspace,
+        context: req.body.context || {},
+        input: req.body.input || {}
+    };
+
+    // Send the input to the conversation service
+    conversation.message(payload, function (err, data) {
+        if (err) {
+            return res.status(err.code || 500).json(err);
+        }
+        return res.json(updateMessage(payload, data));
+    });
+});
 
 app.post('/testClienteAndroid', function (req, res) {
 
@@ -109,6 +132,8 @@ function orquestador(req, res) {
 
 
 
+
+
     // Send the input to the conversation service
     conversation.message(payload, function (err, data) {
         if (err) {
@@ -122,38 +147,64 @@ function orquestador(req, res) {
             output = data.output.text;
             console.log("output conversation:" + output);
             response = response + "<tr><td align='right'><strong>Salida Cliente</strong></td><td>" + output + "</td></tr>";
-            response = response + "<tr><td align='right'><strong>Entrada Cliente</strong></td><td align ='right'><big> <INPUT size=\"120\" style =\" font-size: large; background-color: #99CCFF;\" type=\"text\" name=\"frase\" value=\" \"></big><br> " +
+            response = response + "<tr><td align='right'><strong>Entrada Cliente</strong></td><td align ='right'><big> <INPUT size=\"120\" style =\" font-size: large; background-color: #99CCFF;\" type=\"text\" name=\"frase\" value=\"\"></big><br> " +
                 "<INPUT type=\"submit\" style=\"font-size: larger;\"  value=\"Enviar al orquestador\"></td></tr></table><br><br>";
-            response = response + "<P><strong><big><big>Watson Conversations</big></big></strong></P>" + "<table width=400 border=1 cellspacing=0 cellpading=0>";
+            response = response + "<P><strong><big><big>Watson Conversations</big></big></strong></P>" + "<table width=500 border=1 cellspacing=0 cellpading=0>";
             response = response + "<tr><td><strong>genres</strong></td><td>" + data.context.genres + "</td></tr>";
-            response = response + "<tr><td><strong>Show_type</strong></td><td width=300>" + data.context.Show_type + "</td></tr>";
-            response = response + "<tr><td><strong>title</strong></td><td>" + data.context.title + "</td></tr>";
+            response = response + "<tr><td width=200><strong>Show_type</strong></td><td width=300>" + data.context.Show_type + "</td></tr>";
+            response = response + "<tr><td><strong>titulo</strong></td><td>" + data.context.titulo + "</td></tr>";
             response = response + "<tr><td><strong>cast</strong></td><td>" + data.context.cast + "</td></tr>";
             response = response + "<tr><td><strong>director</strong></td><td>" + data.context.director + "</td></tr>";
             response = response + "<tr><td><strong>novedades</strong></td><td>" + data.context.novedades + "</td></tr>";
             response = response + "<tr><td><strong>valoracion</strong></td><td>" + data.context.valoracion + "</td></tr>";
+            response = response + "<tr><td><strong>Lanzar búsqueda WEX</strong></td><td>" + data.context.Busqueda_WEX + "</td></tr>";
             response = response + "</table>";
 
             // TODO: Meter en un bucle con las propiedades en un array             
             var parametrosBusqueda = "NOT(show_type:Series)";
+            var parametrosOrdenacion = "";
 
+            console.log("contexto" + data.context);
 
             var genres = data.context.genres;
             var show_type = data.context.Show_type;
-            var title = data.context.title;
+            var title = data.context.titulo;
             var cast = data.context.cast;
             var director = data.context.director;
             var novedades = data.context.novedades;
-
-            if (novedades == process.env.ULTIMAS_NOVEDADES) {
-                novedades = process.env.ULTIMAS_NOVEDADES_VALUE;
-            }
-
             var valoracion = data.context.valoracion;
 
-            if (valoracion == process.env.MEJOR_VALORADAS) {
-                valoracion = process.env.MEJOR_VALORADAS_VALUE;
+            var orden = "";
+
+            if ((novedades == process.env.ULTIMAS_NOVEDADES) && (!(valoracion == process.env.MEJOR_VALORADAS))) {
+                parametrosOrdenacion = parametrosOrdenacion + process.env.ORDER_ULTIMAS_NOVEDADES;
+                orden = "novedades";
             }
+
+            if ((!(novedades == process.env.ULTIMAS_NOVEDADES)) && (valoracion == process.env.MEJOR_VALORADAS)) {
+                parametrosOrdenacion = parametrosOrdenacion + process.env.ORDER_MEJOR_VALORADAS;
+                orden = "valoradas";
+            }
+
+            if ((novedades == process.env.ULTIMAS_NOVEDADES) && (valoracion == process.env.MEJOR_VALORADAS)) {
+                novedades = process.env.ULTIMAS_NOVEDADES_VALUE;
+                parametrosOrdenacion = parametrosOrdenacion + process.env.ORDER_MEJOR_VALORADAS;
+                orden = "valoradas";
+
+            }
+
+
+
+            if (!(novedades == null)) {
+                if (parametrosBusqueda.length > 0) {
+
+                    parametrosBusqueda = parametrosBusqueda + " AND ";
+                }
+                parametrosBusqueda = parametrosBusqueda + novedades;
+            }
+
+
+
 
 
             if (!(title == null)) {
@@ -203,33 +254,20 @@ function orquestador(req, res) {
             }
 
 
-            if (!(novedades == null)) {
-                if (parametrosBusqueda.length > 0) {
-
-                    parametrosBusqueda = parametrosBusqueda + " AND ";
-                }
-                parametrosBusqueda = parametrosBusqueda + novedades;
-            }
-
-            if (!(valoracion == null)) {
-                if (parametrosBusqueda.length > 0) {
-
-                    parametrosBusqueda = parametrosBusqueda + " AND ";
-                }
-                parametrosBusqueda = parametrosBusqueda + valoracion;
-            }
 
 
             var lanzar_busqueda_wex = false;
 
-            //lanzar_busqueda_wex = data.context.busqueda_wex;              
-            lanzar_busqueda_wex = true;
+            if (!(data.context.Busqueda_WEX == undefined)) {
+                lanzar_busqueda_wex = data.context.Busqueda_WEX;
+            }
+
 
             var datos;
 
             if (lanzar_busqueda_wex) {
 
-                funciones_wex.request(parametrosBusqueda, function (datos) { //Uso de la funcion request construida en wex.js o similar, recibe los datos en callback "datos"
+                funciones_wex.request(parametrosBusqueda, parametrosOrdenacion, function (datos) { //Uso de la funcion request construida en wex.js o similar, recibe los datos en callback "datos"
 
                     //datos = parseResponse(datos);
                     console.log("después");
@@ -238,19 +276,9 @@ function orquestador(req, res) {
                     datos.llamadaWEX = lanzar_busqueda_wex;
                     datos.context = data.context;
 
-                    if (!(datos == null)) {
-
-                        console.log("WEX resultados:" + datos.es_totalResults);
-
-                    }
-
-                    else {
-
-                        console.log("WEX: Sin resultados");
-                    }
 
 
-
+                    console.log("WEX resultados:" + datos.es_totalResults);
                     if (modoCliente) {
 
                         res.send(datos);
@@ -259,7 +287,6 @@ function orquestador(req, res) {
                     else {
 
                         response = response + "<P><strong><big><big>Resultados WEX </big></big></strong></P>" + "<table width=800 border=1 cellspacing=0 cellpading=0>";
-                        response = response + "<tr><td width=100><strong>Flag invocación a WEX</strong></td><td width=600>" + lanzar_busqueda_wex + "</td></tr>";
                         response = response + "<tr><td width=100><strong>Número de resultados</strong></td><td width=600>" + datos.es_totalResults + "</td></tr>";
                         response = response + "<tr><td><strong>es_evaluationTruncation</strong></td><td width=300>" + datos.es_evaluationTruncation + "</td></tr>";
                         response = response + "<tr><td><strong>es_queryEvaluationTime</strong></td><td width=300>" + datos.es_queryEvaluationTime + "</td></tr>";
@@ -267,35 +294,75 @@ function orquestador(req, res) {
                         response = response + "<tr><td><strong>es_numberOfAvailableResults</strong></td><td width=300>" + datos.es_numberOfAvailableResults + "</td></tr>";
                         response = response + "<tr><td><strong>es_numberOfEstimatedResults</strong></td><td width=300>" + datos.es_numberOfEstimatedResults + "</td></tr>";
                         response = response + "<tr><td><strong>filtros de la query</strong></td><td width=300>" + datos.es_query[0].searchTerms + "</td></tr>";
+                        response = response + "<tr><td><strong>orden de la query</strong></td><td width=300>" + orden + "</td></tr>";
 
-                        if (!(datos.es_result == null)) {
 
-                            response = response + "<tr><td><strong>respuestas devueltas</strong></td><td width=300>" + datos.es_result.length + "</td></tr>";
+                        if (!(datos.es_result == undefined)) {
+
+
                             var listadoTitulos = "";
                             var idPropiedad;
-                            for (var k = 0; k < datos.es_result.length; k++) {
 
-                                listadoTitulos = listadoTitulos + datos.es_result[k].es_title + "(";
+                            if (datos.es_result.length > 1) {
 
 
-                                buscaPosPropiedad(datos.es_result[k], process.env.RATING_FIELD, function (idPropiedad) {
+                                response = response + "<tr><td><strong>respuestas devueltas2</strong></td><td width=300>" + datos.es_result.length + "</td></tr>";
+
+                                for (var k = 0; k < datos.es_result.length; k++) {
+
+                                    listadoTitulos = listadoTitulos + datos.es_result[k].es_title + "(";
+
+
+                                    buscaPosPropiedad(datos.es_result[k], process.env.RATING_FIELD, function (idPropiedad) {
+                                        if (!(idPropiedad == undefined)) {
+                                            listadoTitulos = listadoTitulos + "rating:" + datos.es_result[k].ibmsc_field[idPropiedad]['#text'];
+                                        }
+                                    });
+
+                                    var id;
+                                    buscaPosPropiedad(datos.es_result[k], process.env.YEAR_FIELD, function (idPropiedad) {
+                                        if (!(idPropiedad == undefined)) {
+                                            listadoTitulos = listadoTitulos + " year:" + datos.es_result[k].ibmsc_field[idPropiedad]['#text'];
+                                        }
+
+                                    });
+
+                                    var id;
+                                    buscaPosPropiedad(datos.es_result[k], process.env.GENRE_FIELD, function (idPropiedad) {
+                                        if (!(idPropiedad == undefined)) {
+                                            listadoTitulos = listadoTitulos + " genre:" + datos.es_result[k].ibmsc_field[idPropiedad]['#text'];
+                                        }
+
+                                    });
+
+                                    listadoTitulos = listadoTitulos + ") <br>";
+                                }
+                            }
+                            else {
+
+                                response = response + "<tr><td><strong>respuestas devueltas1</strong></td><td width=300>1</td></tr>";
+
+                                listadoTitulos = listadoTitulos + datos.es_result.es_title + "(";
+
+
+                                buscaPosPropiedad(datos.es_result, process.env.RATING_FIELD, function (idPropiedad) {
                                     if (!(idPropiedad == undefined)) {
-                                        listadoTitulos = listadoTitulos + "rating:" + datos.es_result[k].ibmsc_field[idPropiedad]['#text'];
+                                        listadoTitulos = listadoTitulos + "rating:" + datos.es_result.ibmsc_field[idPropiedad]['#text'];
                                     }
                                 });
 
                                 var id;
-                                buscaPosPropiedad(datos.es_result[k], process.env.YEAR_FIELD, function (idPropiedad) {
+                                buscaPosPropiedad(datos.es_result, process.env.YEAR_FIELD, function (idPropiedad) {
                                     if (!(idPropiedad == undefined)) {
-                                        listadoTitulos = listadoTitulos + " year:" + datos.es_result[k].ibmsc_field[idPropiedad]['#text'];
+                                        listadoTitulos = listadoTitulos + " year:" + datos.es_result.ibmsc_field[idPropiedad]['#text'];
                                     }
 
                                 });
 
                                 var id;
-                                buscaPosPropiedad(datos.es_result[k], process.env.GENRE_FIELD, function (idPropiedad) {
+                                buscaPosPropiedad(datos.es_result, process.env.GENRE_FIELD, function (idPropiedad) {
                                     if (!(idPropiedad == undefined)) {
-                                        listadoTitulos = listadoTitulos + " genre:" + datos.es_result[k].ibmsc_field[idPropiedad]['#text'];
+                                        listadoTitulos = listadoTitulos + " genre:" + datos.es_result.ibmsc_field[idPropiedad]['#text'];
                                     }
 
                                 });
@@ -307,24 +374,32 @@ function orquestador(req, res) {
                             response = response + "</BODY > ";
                             res.send(response);
                         }
+                        else {
+                            response = response + "</BODY > ";
+                            res.send(response);
+                        }
                     }
+
+
+
+
+
                 });
 
-
+                console.log("WEX: Sin resultados0");
             }
             else {
-
-
+                console.log("WEX: Sin resultados2");
 
                 contexto = data.context;
-                ;
+
                 if (modoCliente) {
 
                     res.send(data);
                 }
 
                 else {
-
+                    console.log("WEX: Sin resultados3");
                     response = response + "</BODY > ";
                     res.send(response);
                 }

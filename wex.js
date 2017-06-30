@@ -98,12 +98,15 @@ function accessXML(data, callback) {
   }
 }
 
-function request(input, order, callback) {  // Función que lanza la petición a la url
+function request(input, order, page, callback) {  // Función que lanza la petición a la url
 
 
   console.log("Función request - Input:", input);
+  console.log("Función request - order:", order);
+  console.log("Función request - page:", page);
 
-  var url = createURL(input + (' '), order + (' '));
+  // Parece que  WEX devuelve la misma página para page=0 y page=1
+  var url = createURL(input, order + process.env.PAGE_NUM + page + process.env.PAGE_SIZE);
   console.log("URL:", url);
   var http = new XMLHttpRequest();
   http.open("GET", url, true);

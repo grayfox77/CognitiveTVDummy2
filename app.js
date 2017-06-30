@@ -40,6 +40,7 @@ var conversation = new Conversation({
     version_date: Conversation.VERSION_DATE_2017_04_21
 });
 
+// Aplicación por defecto de WATSON CONVERSATION   - Borrar si se requiere
 app.post('/api/message', function (req, res) {
     var workspace = process.env.WORKSPACE_ID || '<workspace-id>';
     if (!workspace || workspace === '<workspace-id>') {
@@ -64,15 +65,32 @@ app.post('/api/message', function (req, res) {
     });
 });
 
+
+// Invocación por POST para Android 
 app.post('/testClienteAndroid', function (req, res) {
 
     orquestador(req, res);
 });
 
+// Implementación por GET del orquestador
 app.get('/testClienteAndroid', function (req, res) {
 
     orquestador(req, res);
 
+});
+
+
+// Aplicación paginadora de resultados
+app.get('/paginator', function (req, res) {
+
+    console.log("En función paginator");
+    funciones_wex.request(req.query.parametrosBusqueda, req.query.parametrosOrdenacion, req.query.pagina, function (datos) {
+
+        console.log("WEX resultados:" + datos.es_totalResults);
+
+        res.send(datos);
+
+    });
 });
 
 function orquestador(req, res) {
@@ -267,7 +285,8 @@ function orquestador(req, res) {
 
             if (lanzar_busqueda_wex) {
 
-                funciones_wex.request(parametrosBusqueda, parametrosOrdenacion, function (datos) { //Uso de la funcion request construida en wex.js o similar, recibe los datos en callback "datos"
+
+                funciones_wex.request(parametrosBusqueda, parametrosOrdenacion, 1, function (datos) { //Uso de la funcion request construida en wex.js o similar, recibe los datos en callback "datos"
 
                     //datos = parseResponse(datos);
                     console.log("después");
@@ -277,6 +296,13 @@ function orquestador(req, res) {
                     datos.context = data.context;
 
 
+                    console.log("parametrosBusqueda=" + parametrosBusqueda);
+                    console.log("parametrosOrdenacion=" + parametrosOrdenacion);
+                    console.log("pagina=" + 1);
+
+                    datos.parametrosBusqueda = parametrosBusqueda;
+                    datos.parametrosOrdenacion = parametrosOrdenacion;
+                    datos.pagina = 1;
 
                     console.log("WEX resultados:" + datos.es_totalResults);
                     if (modoCliente) {
@@ -386,10 +412,10 @@ function orquestador(req, res) {
 
                 });
 
-                console.log("WEX: Sin resultados0");
+
             }
             else {
-                console.log("WEX: Sin resultados2");
+
 
                 contexto = data.context;
 
@@ -399,7 +425,7 @@ function orquestador(req, res) {
                 }
 
                 else {
-                    console.log("WEX: Sin resultados3");
+
                     response = response + "</BODY > ";
                     res.send(response);
                 }

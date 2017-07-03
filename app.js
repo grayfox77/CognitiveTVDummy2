@@ -93,6 +93,18 @@ app.get('/paginator', function (req, res) {
     });
 });
 
+app.post('/paginator', function (req, res) {
+
+    console.log("En función paginator");
+    funciones_wex.request(req.query.parametrosBusqueda, req.query.parametrosOrdenacion, req.query.pagina, function (datos) {
+
+        console.log("WEX resultados:" + datos.es_totalResults);
+
+        res.send(datos);
+
+    });
+});
+
 function orquestador(req, res) {
 
     var output;

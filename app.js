@@ -191,7 +191,8 @@ function orquestador(req, res) {
             response = response + "</table>";
 
             // TODO: Meter en un bucle con las propiedades en un array             
-            var parametrosBusqueda = "NOT(show_type:Series)";
+            //var parametrosBusqueda = "NOT(show_type:Series)";
+            var parametrosBusqueda = "";
             var parametrosOrdenacion = "";
 
             console.log("contexto" + data.context);

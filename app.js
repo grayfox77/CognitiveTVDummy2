@@ -70,6 +70,7 @@ app.post('/api/message', function (req, res) {
 app.post('/testClienteAndroid', function (req, res) {
 
     orquestador(req, res);
+    
 });
 
 // Implementación por GET del orquestador
@@ -129,7 +130,7 @@ function orquestador(req, res) {
         "<title>Cognitive TV Vodafone Dummy Agent</title>\n" +
         "</HEAD>\n" +
         "<BODY>\n" +
-        "<P><strong><big><big>Cliente Android</big></big></strong></P>" +
+        "<P><strong><big><big><a href=\"/testClienteAndroid\">Cliente Android</a></big></big></strong></P>" +
         "<FORM action=\"/testClienteAndroid\" method=\"get\">\n" +
         "<P>\n" +
         "<table  border=1 cellspacing=0 cellpading=0>" +
@@ -177,16 +178,17 @@ function orquestador(req, res) {
             output = data.output.text;
             console.log("output conversation:" + output);
             response = response + "<tr><td align='right'><strong>Salida Cliente</strong></td><td>" + output + "</td></tr>";
-            response = response + "<tr><td align='right'><strong>Entrada Cliente</strong></td><td align ='right'><big> <INPUT size=\"120\" style =\" font-size: large; background-color: #99CCFF;\" type=\"text\" name=\"frase\" value=\"\"></big><br> " +
+            response = response + "<tr><td align='right'><strong>Entrada Cliente</strong></td><td align ='right'><big> <INPUT size=\"120\" style =\" font-size: large; background-color: #99CCFF;\" type=\"text\" name=\"frase\" value=\"\" autofocus></big><br> " +
                 "<INPUT type=\"submit\" style=\"font-size: larger;\"  value=\"Enviar al orquestador\"></td></tr></table><br><br>";
             response = response + "<P><strong><big><big>Watson Conversations</big></big></strong></P>" + "<table width=500 border=1 cellspacing=0 cellpading=0>";
             response = response + "<tr><td><strong>genres</strong></td><td>" + data.context.genres + "</td></tr>";
             response = response + "<tr><td width=200><strong>Show_type</strong></td><td width=300>" + data.context.Show_type + "</td></tr>";
             response = response + "<tr><td><strong>titulo</strong></td><td>" + data.context.titulo + "</td></tr>";
             response = response + "<tr><td><strong>cast</strong></td><td>" + data.context.cast + "</td></tr>";
-            response = response + "<tr><td><strong>director</strong></td><td>" + data.context.director + "</td></tr>";
+            response = response + "<tr><td><strong>director2</strong></td><td>" + data.context.director + "</td></tr>";
             response = response + "<tr><td><strong>novedades</strong></td><td>" + data.context.novedades + "</td></tr>";
             response = response + "<tr><td><strong>valoracion</strong></td><td>" + data.context.valoracion + "</td></tr>";
+            response = response + "<tr><td><strong>es_totalResults</strong></td><td>" + data.context.es_totalResults + "</td></tr>";            
             response = response + "<tr><td><strong>Lanzar búsqueda WEX</strong></td><td>" + data.context.Busqueda_WEX + "</td></tr>";
             response = response + "</table>";
 
@@ -196,6 +198,8 @@ function orquestador(req, res) {
             var parametrosOrdenacion = "";
 
             console.log("contexto" + data.context);
+            console.log("Contexto en json:" + JSON.stringify(data.context));
+           // console.log("Contexto en json:" +res.json(data.context));
 
             var genres = data.context.genres;
             var show_type = data.context.Show_type;
@@ -302,10 +306,13 @@ function orquestador(req, res) {
                 funciones_wex.request(parametrosBusqueda, parametrosOrdenacion, 1, function (datos) { //Uso de la funcion request construida en wex.js o similar, recibe los datos en callback "datos"
 
                     //datos = parseResponse(datos);
-                    console.log("después");
+                    console.log("después:");
                     datos.input = entrada.text;
                     datos.output = data.output.text;
                     datos.llamadaWEX = lanzar_busqueda_wex;
+                    data.context.es_totalResults = datos.es_totalResults;
+                    console.log("Estableciendo en el contexto el numero de resultado:"+datos.es_totalResults);
+                    contexto.es_totalResults = datos.es_totalResults;
                     datos.context = data.context;
 
 
@@ -316,6 +323,7 @@ function orquestador(req, res) {
                     datos.parametrosBusqueda = parametrosBusqueda;
                     datos.parametrosOrdenacion = parametrosOrdenacion;
                     datos.pagina = 1;
+                    
 
                     console.log("WEX resultados:" + datos.es_totalResults);
                     if (modoCliente) {
@@ -341,79 +349,50 @@ function orquestador(req, res) {
 
                             var listadoTitulos = "";
                             var idPropiedad;
-
+                            var listadoResultado=[];
+                            
                             if (datos.es_result.length > 1) {
+                            	listadoResultado = datos.es_result;
+                            } else {
+                            	listadoResultado = [datos.es_result]
+                            }
+
+                                response = response + "<tr><td><strong>respuestas devueltas</strong></td><td width=300>" + listadoResultado.length + "</td></tr>";
+
+                                for (var k = 0; k < listadoResultado.length; k++) {
+
+                                    listadoTitulos = listadoTitulos + listadoResultado[k].es_title + "(";
 
 
-                                response = response + "<tr><td><strong>respuestas devueltas2</strong></td><td width=300>" + datos.es_result.length + "</td></tr>";
-
-                                for (var k = 0; k < datos.es_result.length; k++) {
-
-                                    listadoTitulos = listadoTitulos + datos.es_result[k].es_title + "(";
-
-
-                                    buscaPosPropiedad(datos.es_result[k], process.env.RATING_FIELD, function (idPropiedad) {
+                                    buscaPosPropiedad(listadoResultado[k], process.env.RATING_FIELD, function (idPropiedad) {
                                         if (!(idPropiedad == undefined)) {
-                                            listadoTitulos = listadoTitulos + "rating:" + datos.es_result[k].ibmsc_field[idPropiedad]['#text'];
+                                            listadoTitulos = listadoTitulos + "rating:" + listadoResultado[k].ibmsc_field[idPropiedad]['#text'];
                                         }
                                     });
 
                                     var id;
-                                    buscaPosPropiedad(datos.es_result[k], process.env.YEAR_FIELD, function (idPropiedad) {
+                                    buscaPosPropiedad(listadoResultado[k], process.env.YEAR_FIELD, function (idPropiedad) {
                                         if (!(idPropiedad == undefined)) {
-                                            listadoTitulos = listadoTitulos + " year:" + datos.es_result[k].ibmsc_field[idPropiedad]['#text'];
+                                            listadoTitulos = listadoTitulos + " year:" + listadoResultado[k].ibmsc_field[idPropiedad]['#text'];
                                         }
 
                                     });
 
                                     var id;
-                                    buscaPosPropiedad(datos.es_result[k], process.env.GENRE_FIELD, function (idPropiedad) {
+                                    buscaPosPropiedad(listadoResultado[k], process.env.GENRE_FIELD, function (idPropiedad) {
                                         if (!(idPropiedad == undefined)) {
-                                            listadoTitulos = listadoTitulos + " genre:" + datos.es_result[k].ibmsc_field[idPropiedad]['#text'];
+                                            listadoTitulos = listadoTitulos + " genre:" + listadoResultado[k].ibmsc_field[idPropiedad]['#text'];
                                         }
 
                                     });
 
                                     listadoTitulos = listadoTitulos + ") <br>";
                                 }
-                            }
-                            else {
-
-                                response = response + "<tr><td><strong>respuestas devueltas1</strong></td><td width=300>1</td></tr>";
-
-                                listadoTitulos = listadoTitulos + datos.es_result.es_title + "(";
-
-
-                                buscaPosPropiedad(datos.es_result, process.env.RATING_FIELD, function (idPropiedad) {
-                                    if (!(idPropiedad == undefined)) {
-                                        listadoTitulos = listadoTitulos + "rating:" + datos.es_result.ibmsc_field[idPropiedad]['#text'];
-                                    }
-                                });
-
-                                var id;
-                                buscaPosPropiedad(datos.es_result, process.env.YEAR_FIELD, function (idPropiedad) {
-                                    if (!(idPropiedad == undefined)) {
-                                        listadoTitulos = listadoTitulos + " year:" + datos.es_result.ibmsc_field[idPropiedad]['#text'];
-                                    }
-
-                                });
-
-                                var id;
-                                buscaPosPropiedad(datos.es_result, process.env.GENRE_FIELD, function (idPropiedad) {
-                                    if (!(idPropiedad == undefined)) {
-                                        listadoTitulos = listadoTitulos + " genre:" + datos.es_result.ibmsc_field[idPropiedad]['#text'];
-                                    }
-
-                                });
-
-                                listadoTitulos = listadoTitulos + ") <br>";
-                            }
                             response = response + "<tr><td><strong>Títulos devueltos en llamada</strong></td><td width=300><small>" + listadoTitulos + "</small></td></tr>";
-                            response = response + "</table>";
+                            response = response + "</table>";                        
                             response = response + "</BODY > ";
                             res.send(response);
-                        }
-                        else {
+                        } else {
                             response = response + "</BODY > ";
                             res.send(response);
                         }
@@ -430,11 +409,20 @@ function orquestador(req, res) {
             else {
 
 
-                contexto = data.context;
+            	contexto = data.context;
 
                 if (modoCliente) {
+                    var responseConversation = {
+                        input : data.input.text,
+                        output : data.output.text,
+                        context: data.context,
+                        es_result : [],
+                        llamadaWEX : false                    
+                    }
 
-                    res.send(data);
+                    //res.send(data);                    
+                    console.log("### RESPONSE FROM CONVERSATION :: " , responseConversation);
+                    res.send(responseConversation);                    
                 }
 
                 else {

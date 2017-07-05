@@ -19,9 +19,13 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
+    "basic-auth-connect": "^1.0.0",
     "body-parser": "^1.15.2",
     "dotenv": "^2.0.0",
     "express": "^4.14.0",
+    "nano": "^6.3.0",
+    "uuid": "^3.1.0",
+    "vcap_services": "^0.3.4",
     "watson-developer-cloud": "^2.31.1"
   },
   "devDependencies": {

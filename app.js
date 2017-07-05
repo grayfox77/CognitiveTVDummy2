@@ -21,6 +21,25 @@ var bodyParser = require('body-parser'); // parser for post requests
 var Conversation = require('watson-developer-cloud/conversation/v1'); // watson sdk
 var funciones_wex = require('./wex.js');
 
+var uuid = require( 'uuid' ); 
+var vcapServices = require( 'vcap_services' ); 
+var basicAuth = require( 'basic-auth-connect' ); 
+
+// The app owner may optionally configure a cloudand db to track user input. 
+// This cloudand db is not required, the app will operate without it. 
+// If logging is enabled the app must also enable basic auth to secure logging 
+// endpoints 
+var cloudantCredentials = vcapServices.getCredentials( 'cloudantNoSQLDB' ); 
+var cloudantUrl = null; 
+if ( cloudantCredentials ) {
+	console.info("Configurado url de BBDD desde vcapServices:"+cloudantCredentials.url);
+	cloudantUrl = cloudantCredentials.url; 
+} 
+cloudantUrl = cloudantUrl || process.env.CLOUDANT_URL; // || '<cloudant_url>'; 
+
+var logDDBB = null;
+var NAME_LOGDDBB = process.env.NAME_LOGDDBB;
+
 var entrada = new Object;
 var contexto = new Object;
 
@@ -39,6 +58,8 @@ var conversation = new Conversation({
     url: 'https://gateway-fra.watsonplatform.net/conversation/api',
     version_date: Conversation.VERSION_DATE_2017_04_21
 });
+
+
 
 // Aplicación por defecto de WATSON CONVERSATION   - Borrar si se requiere
 app.post('/api/message', function (req, res) {
@@ -146,6 +167,7 @@ function orquestador(req, res) {
 
     // Aplicamos stopwords
     var sw = require('stopword');
+    var rawInput=req.query.frase;
     const oldString = req.query.frase.split(' ');
     console.log("antes:" + oldString);
     req.query.frase = sw.removeStopwords(oldString, sw.es);
@@ -164,15 +186,22 @@ function orquestador(req, res) {
 
 
 
-
+    console.info("Payload:"+JSON.stringify(payload));
     // Send the input to the conversation service
     conversation.message(payload, function (err, data) {
+    	var idLog = null;     	
         if (err) {
             console.log("por error");
             return res.status(err.code || 500).json(err);
         }
         else {
+       	
             console.log("salida:" + data);
+            if (logDDBB) {
+                // If the logs db is set, then we want to record all input and responses 
+            	idLog = uuid.v4(); 
+            	//logDDBB.insert( {'_id': idLog, 'request': rawInput  + " --> " +entrada, 'response': JSON.stringify(data), 'time': new Date()}); 
+            }
             //console.log("por allá:" + data.intents[0].confidence);
 
             output = data.output.text;
@@ -182,7 +211,7 @@ function orquestador(req, res) {
                 "<INPUT type=\"submit\" style=\"font-size: larger;\"  value=\"Enviar al orquestador\"></td></tr></table><br><br>";
             response = response + "<P><strong><big><big>Watson Conversations</big></big></strong></P>" + "<table width=500 border=1 cellspacing=0 cellpading=0>";
             response = response + "<tr><td><strong>genres</strong></td><td>" + data.context.genres + "</td></tr>";
-            response = response + "<tr><td width=200><strong>Show_type</strong></td><td width=300>" + data.context.Show_type + "</td></tr>";
+            response = response + "<tr><td width=200><strong>show_type</strong></td><td width=300>" + data.context.show_type + "</td></tr>";
             response = response + "<tr><td><strong>titulo</strong></td><td>" + data.context.titulo + "</td></tr>";
             response = response + "<tr><td><strong>cast</strong></td><td>" + data.context.cast + "</td></tr>";
             response = response + "<tr><td><strong>director2</strong></td><td>" + data.context.director + "</td></tr>";
@@ -202,7 +231,7 @@ function orquestador(req, res) {
            // console.log("Contexto en json:" +res.json(data.context));
 
             var genres = data.context.genres;
-            var show_type = data.context.Show_type;
+            var show_type = data.context.show_type;
             var title = data.context.titulo;
             var cast = data.context.cast;
             var director = data.context.director;
@@ -229,7 +258,6 @@ function orquestador(req, res) {
             }
 
 
-
             if (!(novedades == null)) {
                 if (parametrosBusqueda.length > 0) {
 
@@ -241,55 +269,11 @@ function orquestador(req, res) {
 
 
 
-
-            if (!(title == null)) {
-                if (parametrosBusqueda.length > 0) {
-                    parametrosBusqueda = parametrosBusqueda + " AND ";
-                }
-                parametrosBusqueda = parametrosBusqueda + "title:" + title;
-            }
-
-
-            if (!(genres == null)) {
-
-
-                if (parametrosBusqueda.length > 0) {
-                    parametrosBusqueda = parametrosBusqueda + " AND ";
-                }
-                parametrosBusqueda = parametrosBusqueda + "genres:" + genres;
-            }
-
-
-
-            if (!(show_type == null)) {
-                if (parametrosBusqueda.length > 0) {
-
-                    parametrosBusqueda = parametrosBusqueda + " AND ";
-                }
-                parametrosBusqueda = parametrosBusqueda + "show_type:" + show_type;
-            }
-
-
-
-            if (!(cast == null)) {
-                if (parametrosBusqueda.length > 0) {
-
-                    parametrosBusqueda = parametrosBusqueda + " AND ";
-                }
-                parametrosBusqueda = parametrosBusqueda + "cast:" + cast;
-            }
-
-
-            if (!(director == null)) {
-                if (parametrosBusqueda.length > 0) {
-
-                    parametrosBusqueda = parametrosBusqueda + " AND ";
-                }
-                parametrosBusqueda = parametrosBusqueda + "director:" + director;
-            }
-
-
-
+            parametrosBusqueda = agregarParametroBusq(parametrosBusqueda,"title",title);
+            parametrosBusqueda = agregarParametroBusq(parametrosBusqueda,"genres",genres);
+            parametrosBusqueda = agregarParametroBusq(parametrosBusqueda,"show_type",show_type);
+            parametrosBusqueda = agregarParametroBusq(parametrosBusqueda,"cast",cast);
+            parametrosBusqueda = agregarParametroBusq(parametrosBusqueda,"director",director);
 
             var lanzar_busqueda_wex = false;
 
@@ -299,6 +283,8 @@ function orquestador(req, res) {
 
 
             var datos;
+            
+        	contexto = data.context;
 
             if (lanzar_busqueda_wex) {
 
@@ -409,7 +395,7 @@ function orquestador(req, res) {
             else {
 
 
-            	contexto = data.context;
+
 
                 if (modoCliente) {
                     var responseConversation = {
@@ -498,6 +484,22 @@ function updateMessage(input, response) {
     return response;
 }
 
+
+function agregarParametroBusq(parametrosBusqueda,campo,valor) {
+
+	if (valor != null && '' != valor ) {
+		var strAuxiliar=parametrosBusqueda;
+	    if (strAuxiliar.length > 0) {
+	
+	    	strAuxiliar = strAuxiliar + " AND ";
+	    }
+	    return strAuxiliar + campo+":" + valor;
+	} else {
+		return parametrosBusqueda;
+	}
+	
+}
+
 function parseResponse(datos) {
     console.log("antes");
     var result = {
@@ -523,5 +525,105 @@ function parseResponse(datos) {
     return datos;
 };
 
+
+if ( cloudantUrl ) { 
+	   // If logging has been enabled (as signalled by the presence of the cloudantUrl) then the 
+	   // app developer must also specify a LOG_USER and LOG_PASS env vars. 
+	   if ( !process.env.LOG_USER || !process.env.LOG_PASS ) { 
+	     throw new Error( 'LOG_USER OR LOG_PASS not defined, both required to enable logging!' ); 
+	   } 
+	   // add basic auth to the endpoints to retrieve the logs! 
+	   var auth = basicAuth( process.env.LOG_USER, process.env.LOG_PASS ); 
+	   // If the cloudantUrl has been configured then we will want to set up a nano client 
+	   var nano = require( 'nano' )( cloudantUrl ); 
+	   // add a new API which allows us to retrieve the logs (note this is not secure) 
+	   nano.db.get( NAME_LOGDDBB, function(err) { 
+	     if ( err ) { 
+	    	 console.info("Hay error al obtener la BBDD:"+NAME_LOGDDBB);
+	       console.error(err); 
+	       nano.db.create( NAME_LOGDDBB, function(errCreate) {
+	    	   console.info("Se intenta volver a crear la BBDD:")
+	         console.error(errCreate); 
+	         logDDBB = nano.db.use( NAME_LOGDDBB ); 
+	       } ); 
+	     } else { 
+	    	 console.info("Utilizando la BBDD"+NAME_LOGDDBB);
+	    	 logDDBB = nano.db.use( NAME_LOGDDBB ); 
+	     } 
+	   } ); 
+	  
+	   // Endpoint which allows deletion of db 
+	   app.post( '/clearDb', auth, function(req, res) { 
+	     nano.db.destroy( NAME_LOGDDBB, function() { 
+	       nano.db.create( NAME_LOGDDBB, function() { 
+	    	   logDDBB = nano.db.use( NAME_LOGDDBB ); 
+	       } ); 
+	     } ); 
+	     return res.json( {'message': 'Clearing db'} ); 
+	   } ); 	   
+	  
+	   // Endpoint which allows conversation logs to be fetched 
+	   //app.get( '/chats', auth, function(req, res) {
+	   app.get( '/chats', function(req, res) {
+		   logDDBB.list( {include_docs: true, 'descending': true}, function(err, body) { 
+	       console.error(err); 
+	       // download as CSV 
+	       var csv = []; 
+	       csv.push( ['Question', 'Intent', 'Confidence', 'Entity', 'Output', 'Time'] );
+	       console.log("El cuerpo"+body);
+	       console.log("El cuerpo en json:" + JSON.stringify(body));
+	       if (body != null) {
+	       body.rows.sort( function(a, b) { 
+	         if ( a && b && a.doc && b.doc ) { 
+	           var date1 = new Date( a.doc.time ); 
+	           var date2 = new Date( b.doc.time ); 
+	           var t1 = date1.getTime(); 
+	           var t2 = date2.getTime(); 
+	           var aGreaterThanB = t1 > t2; 
+	           var equal = t1 === t2; 
+	           if (aGreaterThanB) { 
+	             return 1; 
+	           } 
+	           return  equal ? 0 : -1; 
+	         } 
+	       } ); 
+	       body.rows.forEach( function(row) { 
+	         var question = ''; 
+	         var intent = ''; 
+	         var confidence = 0; 
+	         var time = ''; 
+	         var entity = ''; 
+	         var outputText = ''; 
+	         if ( row.doc ) { 
+	           var doc = row.doc; 
+	           if ( doc.request && doc.request.input ) { 
+	             question = doc.request.input.text; 
+	           } 
+	           if ( doc.response ) { 
+	             intent = '<no intent>'; 
+	             if ( doc.response.intents && doc.response.intents.length > 0 ) { 
+	               intent = doc.response.intents[0].intent; 
+	               confidence = doc.response.intents[0].confidence; 
+	             } 
+	             entity = '<no entity>'; 
+	             if ( doc.response.entities && doc.response.entities.length > 0 ) { 
+	               entity = doc.response.entities[0].entity + ' : ' + doc.response.entities[0].value; 
+	             } 
+	             outputText = '<no dialog>'; 
+	             if ( doc.response.output && doc.response.output.text ) { 
+	               outputText = doc.response.output.text.join( ' ' ); 
+	             } 
+	           } 
+	           time = new Date( doc.time ).toLocaleString(); 
+	         } 
+	         csv.push( [question, intent, confidence, entity, outputText, time] ); 
+	       } );
+		   };
+	       res.csv( csv ); 
+	     } ); 
+	   } ); 
+}  // Fin  if cloudantUrl 
+
+console.log("Arrancando la aplicación");
 
 module.exports = app;

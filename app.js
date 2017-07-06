@@ -200,7 +200,7 @@ function orquestador(req, res) {
             if (logDDBB) {
                 // If the logs db is set, then we want to record all input and responses 
             	idLog = uuid.v4(); 
-            	//logDDBB.insert( {'_id': idLog, 'request': rawInput  + " --> " +entrada, 'response': JSON.stringify(data), 'time': new Date()}); 
+            	logDDBB.insert( {'_id': idLog, 'request': rawInput  + " --> " +entrada, 'response': JSON.stringify(data), 'time': new Date()}); 
             }
             //console.log("por allá:" + data.intents[0].confidence);
 
@@ -226,8 +226,7 @@ function orquestador(req, res) {
             var parametrosBusqueda = "";
             var parametrosOrdenacion = "";
 
-            console.log("contexto:" + data.context);
-            console.log("Contexto en json:" + JSON.stringify(data.context));
+
            // console.log("Contexto en json:" +res.json(data.context));
 
             var genres = data.context.genres;
@@ -284,15 +283,25 @@ function orquestador(req, res) {
 
             var datos;
             
-        	contexto = data.context;
-
+            contexto = data.context;
+            console.log("contexto antes :" + JSON.stringify(contexto));
+            
+            // Estableciendo variables en el contexto
+        	contexto.numPalabrasEntradaRaw=oldString.length;
+        	contexto.numPalabrasEntrada=entrada.text.split(' ').length;
+        	if (output =='Perfecto, te muestro lo que he encontrado, si quieres seguimos buscando.') {
+        		delete contexto.titulo;
+        	}        	
+            console.log("Contexto en despues:" + JSON.stringify(contexto));
+        	
+        	
             if (lanzar_busqueda_wex) {
 
 
                 funciones_wex.request(parametrosBusqueda, parametrosOrdenacion, 1, function (datos) { //Uso de la funcion request construida en wex.js o similar, recibe los datos en callback "datos"
 
                     //datos = parseResponse(datos);
-                    console.log("después:");
+                    console.log("Callback llamada wex:");
                     datos.input = entrada.text;
                     datos.output = data.output.text;
                     datos.llamadaWEX = lanzar_busqueda_wex;
@@ -619,7 +628,7 @@ if ( cloudantUrl ) {
 	         csv.push( [question, intent, confidence, entity, outputText, time] ); 
 	       } );
 		   };
-	       res.csv( csv ); 
+	       res.json( csv ); 
 	     } ); 
 	   } ); 
 }  // Fin  if cloudantUrl 

@@ -4,9 +4,9 @@ applications:
 - path: .
   memory: 256M
   instances: 1
-  domain: mybluemix.net
-  name: CognitiveVodaTVPOC3
-  host: CognitiveVodaTVPOC3
+  domain: eu-de.mybluemix.net
+  name: CognitiveTVVFdummy
+  host: CognitiveTVVFdummy
   disk_quota: 1024M
 
   env:

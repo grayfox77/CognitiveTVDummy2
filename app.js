@@ -214,7 +214,7 @@ function orquestador(req, res) {
             response = response + "<tr><td width=200><strong>show_type</strong></td><td width=300>" + data.context.show_type + "</td></tr>";
             response = response + "<tr><td><strong>titulo</strong></td><td>" + data.context.titulo + "</td></tr>";
             response = response + "<tr><td><strong>cast</strong></td><td>" + data.context.cast + "</td></tr>";
-            response = response + "<tr><td><strong>director2</strong></td><td>" + data.context.director + "</td></tr>";
+            response = response + "<tr><td><strong>director</strong></td><td>" + data.context.director + "</td></tr>";
             response = response + "<tr><td><strong>novedades</strong></td><td>" + data.context.novedades + "</td></tr>";
             response = response + "<tr><td><strong>valoracion</strong></td><td>" + data.context.valoracion + "</td></tr>";
             response = response + "<tr><td><strong>es_totalResults</strong></td><td>" + data.context.es_totalResults + "</td></tr>";            

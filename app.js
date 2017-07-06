@@ -226,7 +226,7 @@ function orquestador(req, res) {
             var parametrosBusqueda = "";
             var parametrosOrdenacion = "";
 
-            console.log("contexto" + data.context);
+            console.log("contexto:" + data.context);
             console.log("Contexto en json:" + JSON.stringify(data.context));
            // console.log("Contexto en json:" +res.json(data.context));
 

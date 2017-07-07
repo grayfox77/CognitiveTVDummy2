@@ -41,7 +41,7 @@ var logDDBB = null;
 var NAME_LOGDDBB = process.env.NAME_LOGDDBB;
 
 var entrada = new Object;
-var contexto = new Object;
+//var contexto = new Object;
 
 var app = express();
 
@@ -158,6 +158,10 @@ function escapeJSON(datos) {
 function aplicacionDummy(req,res,datosClienteAndroid) {
 	//console.info("Datos cliente android:"+JSON.stringify(datosClienteAndroid));
 	var frase = req.query.frase || req.body.frase;
+    if (frase == 'undefined' || frase == null) {
+        frase = '';
+//        contexto = new Object;
+    }	
     var response = "<HEAD>" +
     "<title>Cognitive TV Vodafone Dummy Agent</title>\n" +
     "</HEAD>\n" +
@@ -167,9 +171,7 @@ function aplicacionDummy(req,res,datosClienteAndroid) {
     "<P>\n" +
     "<table  border=1 cellspacing=0 cellpading=0>" +
     "<tr><td width=120 align='right'><strong>Anterior entrada </strong></td><td><INPUT readonly size=\"120\" style =\"color: #888888; background-color: #DDDDDD;\" type=\"text\"  value=\"" + frase + "\">" +
-    		"<INPUT name=\"contexto\" type=\"hidden\" size=\"120\" style =\"color: #888888; background-color: #DDDDDD;\" type=\"text\"  value='" + escapeJSON(datosClienteAndroid.context) + "'></td > </tr>" +
-    //"<tr><td width=120 align='right'><strong>Context </strong></td><td><INPUT readonly size=\"120\" style =\"color: #888888; background-color: #DDDDDD;\" type=\"text\"  value='" + escapeJSON(datosClienteAndroid.context) + "'></td > </tr>" +
-    //"<tr><td width=120 align='right'><strong>Context </strong></td><td><INPUT name=\"contexto\" type=\"hidden\" size=\"120\" style =\"color: #888888; background-color: #DDDDDD;\" type=\"text\"  value='" + escapeJSON(datosClienteAndroid.context) + "'></td > </tr>" +    
+    "<INPUT name=\"context\" type=\"hidden\" size=\"120\" style =\"color: #888888; background-color: #DDDDDD;\" type=\"text\"  value='" + escapeJSON(datosClienteAndroid.context) + "'></td > </tr>" +
     "</P>\n" +
     "</FORM>\n";
     response = response + "<tr><td align='right'><strong>Salida Cliente</strong></td><td>" + datosClienteAndroid.output + "</td></tr>";
@@ -213,8 +215,7 @@ function listadoTitulos(result) {
 	var listadoResultado=[];
     if (!(result == undefined)) {
 
-
-        var idPropiedad;
+    	var idPropiedad;
         
         if (result.length > 1) {
         	listadoResultado = result;
@@ -278,7 +279,7 @@ function peticionClienteAndroid(req, res) {
     // Comprobamos que no venga vacía, y si es así la inicializamos        
     if (frase == 'undefined' || frase == null) {
         frase = '';
-        contexto = new Object;
+//        contexto = new Object;
     }
     console.info("El valor de la frase <"+frase +">");
 
@@ -294,18 +295,25 @@ function peticionClienteAndroid(req, res) {
     entrada.text = frase.toString();
     entrada.text = entrada.text.replace(/,/g, ' ');
     // Estableciendo variables en el contexto
-	contexto.numPalabrasEntradaRaw=oldString.length;
-	contexto.numPalabrasEntrada=entrada.text.split(' ').length;
 	
-	console.info("Contexto en el body al estilo:"+JSON.stringify(req.body.contexto));
-
+	console.info("Contexto en el body al estilo:"+JSON.stringify(req.body.context));
+	var paramContext ={};
+	if (req.body.context) {
+		if (typeof req.body.context == 'string') {
+			paramContext = JSON.parse(req.body.context);
+		} else if (typeof req.body.context == 'object'){
+			paramContext = req.body.context;
+		} 
+	}
     var payload = {
         workspace_id: workspace,
-        context: contexto || {},
+        context: paramContext,
         input: entrada || {}
     };
 
 
+    payload.context.numPalabrasEntradaRaw=oldString.length;
+    payload.context.numPalabrasEntrada=entrada.text.split(' ').length;
 
 
     console.info("Payload:"+JSON.stringify(payload));
@@ -322,7 +330,7 @@ function peticionClienteAndroid(req, res) {
             if (logDDBB) {
                 // If the logs db is set, then we want to record all input and responses 
             	idLog = uuid.v4(); 
-            	logDDBB.insert( {'_id': idLog, 'request': rawInput  + " --> " +entrada, 'response': JSON.stringify(data), 'time': new Date()}); 
+            	logDDBB.insert( {'_id': idLog, 'request': rawInput  + " --> " +entrada, 'response': data, 'time': new Date()}); 
             }
             //console.log("por allá:" + data.intents[0].confidence);
 
@@ -336,7 +344,6 @@ function peticionClienteAndroid(req, res) {
 
            // console.log("Contexto en json:" +res.json(data.context));
 
-            console.log("contexto al principio *********** :" + JSON.stringify(data.context));
             var genres = data.context.genres;
             var show_type = data.context.show_type;
             var title = data.context.titulo;
@@ -391,14 +398,14 @@ function peticionClienteAndroid(req, res) {
 
             var datos;
             
-            contexto = data.context;
-            console.log("contexto antes :" + JSON.stringify(contexto));
+            //contexto = data.context;
+            //console.log("contexto antes :" + JSON.stringify(contexto));
             
 
         	if (output =='Perfecto, te muestro lo que he encontrado, si quieres seguimos buscando.') {
-        		delete contexto.titulo;
+        		delete data.context.titulo;
         	}        	
-            console.log("Contexto en despues:" + JSON.stringify(contexto));
+            console.log("Contexto en despues:" + JSON.stringify(data.context));
         	
         	
             if (lanzar_busqueda_wex) {
@@ -410,12 +417,10 @@ function peticionClienteAndroid(req, res) {
                     console.log("Callback llamada wex:");
                     datos.input = entrada.text;
                     datos.output = data.output.text;
-                    datos.llamadaWEX = lanzar_busqueda_wex;
                     data.context.es_totalResults = datos.es_totalResults;
                     console.log("Estableciendo en el contexto el numero de resultado:"+datos.es_totalResults);
-                    contexto.es_totalResults = datos.es_totalResults;
                     datos.context = data.context;
-
+                    datos.context.es_totalResults = datos.es_totalResults;
 
                     console.log("parametrosBusqueda=" + parametrosBusqueda);
                     console.log("parametrosOrdenacion=" + parametrosOrdenacion);
@@ -594,8 +599,7 @@ if ( cloudantUrl ) {
 	       // download as CSV 
 	       var csv = []; 
 	       csv.push( ['Question', 'Intent', 'Confidence', 'Entity', 'Output', 'Time'] );
-	       console.log("El cuerpo"+body);
-	       console.log("El cuerpo en json:" + JSON.stringify(body));
+	       console.log("Numero de filas en la BBDD de logs"+body.row.length);
 	       if (body != null) {
 	       body.rows.sort( function(a, b) { 
 	         if ( a && b && a.doc && b.doc ) { 

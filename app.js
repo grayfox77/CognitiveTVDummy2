@@ -48,6 +48,9 @@ var app = express();
 // Bootstrap application settings
 app.use(express.static('./public')); // load UI from public folder
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({     // to support URL-encoded bodies
+	  extended: true
+	})); 
 
 // Create the service wrapper
 var conversation = new Conversation({
@@ -90,14 +93,16 @@ app.post('/api/message', function (req, res) {
 // Invocación por POST para Android 
 app.post('/testClienteAndroid', function (req, res) {
 
-    orquestador(req, res);
+	entradaPrincipal(req, res);
     
 });
 
 // Implementación por GET del orquestador
 app.get('/testClienteAndroid', function (req, res) {
 
-    orquestador(req, res);
+    //if (req.query.frase == '') {
+	entradaPrincipal(req, res);
+    //}
 
 });
 
@@ -127,7 +132,134 @@ app.post('/paginator', function (req, res) {
     });
 });
 
-function orquestador(req, res) {
+
+function entradaPrincipal(req,res) {
+        peticionClienteAndroid(req, res);
+}
+/**
+ * Funcion que devuelve los datos como cliente de android puro o a la aplicacion Dummy.
+ * @param req
+ * @param res
+ * @param datos
+ * @returns
+ */
+function devuelveDatos(req,res,datos) {
+    if (!(typeof req.query.modoCliente == 'undefined' && req.query.modoCliente == null)) {
+        res.send(datos);
+    } else {
+    	aplicacionDummy(req,res,datos);
+    }		
+}
+
+function escapeJSON(datos) {
+	return JSON.stringify(datos).replace(/'/g,"&apos;");
+	//return JSON.stringify(datos);
+}
+function aplicacionDummy(req,res,datosClienteAndroid) {
+	//console.info("Datos cliente android:"+JSON.stringify(datosClienteAndroid));
+	var frase = req.query.frase || req.body.frase;
+    var response = "<HEAD>" +
+    "<title>Cognitive TV Vodafone Dummy Agent</title>\n" +
+    "</HEAD>\n" +
+    "<BODY>\n" +
+    "<P><strong><big><big><a href=\"/testClienteAndroid\">Cliente Android</a></big></big></strong></P>" +
+    "<FORM action=\"/testClienteAndroid\" method=\"post\">\n" +
+    "<P>\n" +
+    "<table  border=1 cellspacing=0 cellpading=0>" +
+    "<tr><td width=120 align='right'><strong>Anterior entrada </strong></td><td><INPUT readonly size=\"120\" style =\"color: #888888; background-color: #DDDDDD;\" type=\"text\"  value=\"" + frase + "\">" +
+    		"<INPUT name=\"contexto\" type=\"hidden\" size=\"120\" style =\"color: #888888; background-color: #DDDDDD;\" type=\"text\"  value='" + escapeJSON(datosClienteAndroid.context) + "'></td > </tr>" +
+    //"<tr><td width=120 align='right'><strong>Context </strong></td><td><INPUT readonly size=\"120\" style =\"color: #888888; background-color: #DDDDDD;\" type=\"text\"  value='" + escapeJSON(datosClienteAndroid.context) + "'></td > </tr>" +
+    //"<tr><td width=120 align='right'><strong>Context </strong></td><td><INPUT name=\"contexto\" type=\"hidden\" size=\"120\" style =\"color: #888888; background-color: #DDDDDD;\" type=\"text\"  value='" + escapeJSON(datosClienteAndroid.context) + "'></td > </tr>" +    
+    "</P>\n" +
+    "</FORM>\n";
+    response = response + "<tr><td align='right'><strong>Salida Cliente</strong></td><td>" + datosClienteAndroid.output + "</td></tr>";
+    response = response + "<tr><td align='right'><strong>Entrada Cliente</strong></td><td align ='right'><big> <INPUT size=\"120\" style =\" font-size: large; background-color: #99CCFF;\" type=\"text\" name=\"frase\" value=\"\" autofocus></big><br> " +
+        "<INPUT type=\"submit\" style=\"font-size: larger;\"  value=\"Enviar al orquestador\"></td></tr></table><br><br>";
+    response = response + "<P><strong><big><big>Watson Conversations</big></big></strong></P>" + "<table width=500 border=1 cellspacing=0 cellpading=0>";
+    response = response + "<tr><td><strong>genres</strong></td><td>" + datosClienteAndroid.context.genres + "</td></tr>";
+    response = response + "<tr><td width=200><strong>show_type</strong></td><td width=300>" + datosClienteAndroid.context.show_type + "</td></tr>";
+    response = response + "<tr><td><strong>titulo</strong></td><td>" + datosClienteAndroid.context.titulo + "</td></tr>";
+    response = response + "<tr><td><strong>cast</strong></td><td>" + datosClienteAndroid.context.cast + "</td></tr>";
+    response = response + "<tr><td><strong>director</strong></td><td>" + datosClienteAndroid.context.director + "</td></tr>";
+    response = response + "<tr><td><strong>novedades</strong></td><td>" + datosClienteAndroid.context.novedades + "</td></tr>";
+    response = response + "<tr><td><strong>valoracion</strong></td><td>" + datosClienteAndroid.context.valoracion + "</td></tr>";
+    response = response + "<tr><td><strong>numPalabrasEntrada</strong></td><td>" + datosClienteAndroid.context.numPalabrasEntrada + "</td></tr>";  
+    response = response + "<tr><td><strong>numPalabrasEntradaRaw</strong></td><td>" + datosClienteAndroid.context.numPalabrasEntradaRaw + "</td></tr>";
+    response = response + "<tr><td><strong>es_totalResults(Anterior)</strong></td><td>" + datosClienteAndroid.context.es_totalResults + "</td></tr>";
+    response = response + "<tr><td><strong>Lanzar búsqueda WEX</strong></td><td>" + datosClienteAndroid.context.Busqueda_WEX + "</td></tr>";
+    response = response + "</table>";
+    if (datosClienteAndroid.context.Busqueda_WEX) {
+	    response = response + "<P><strong><big><big>Resultados WEX </big></big></strong></P>" + "<table width=800 border=1 cellspacing=0 cellpading=0>";
+	    response = response + "<tr><td width=100><strong>Número de resultados</strong></td><td width=600>" + datosClienteAndroid.es_totalResults + "</td></tr>";
+	    response = response + "<tr><td><strong>es_evaluationTruncation</strong></td><td width=300>" + datosClienteAndroid.es_evaluationTruncation + "</td></tr>";
+	    response = response + "<tr><td><strong>es_queryEvaluationTime</strong></td><td width=300>" + datosClienteAndroid.es_queryEvaluationTime + "</td></tr>";
+	    response = response + "<tr><td><strong>es_totalResultsType</strong></td><td width=300>" + datosClienteAndroid.es_totalResultsType + "</td></tr>";
+	    response = response + "<tr><td><strong>es_numberOfAvailableResults</strong></td><td width=300>" + datosClienteAndroid.es_numberOfAvailableResults + "</td></tr>";
+	    response = response + "<tr><td><strong>es_numberOfEstimatedResults</strong></td><td width=300>" + datosClienteAndroid.es_numberOfEstimatedResults + "</td></tr>";
+	    response = response + "<tr><td><strong>filtros de la query</strong></td><td width=300>" + datosClienteAndroid.es_query[0].searchTerms + "</td></tr>";
+	    response = response + "<tr><td><strong>orden de la query</strong></td><td width=300>" + datosClienteAndroid.parametrosOrdenacion + "</td></tr>";
+	    var resTitulos=listadoTitulos(datosClienteAndroid.es_result);
+	    response = response + "<tr><td><strong>respuestas devueltas</strong></td><td width=300>" + resTitulos.numElementos + "</td></tr>";    
+	    response = response + "<tr><td><strong>Títulos devueltos en llamada</strong></td><td width=300><small>" + resTitulos.listadoTitulos + "</small></td></tr>";
+	    response = response + "</table>";
+    }
+    response = response + "</BODY > ";
+    res.send(response);
+}
+
+function listadoTitulos(result) {
+	var resultado=new Object();
+	var listadoTitulos = "";
+	var listadoResultado=[];
+    if (!(result == undefined)) {
+
+
+        var idPropiedad;
+        
+        if (result.length > 1) {
+        	listadoResultado = result;
+        } else {
+        	listadoResultado = [result];
+        }
+
+
+
+            for (var k = 0; k < listadoResultado.length; k++) {
+
+                listadoTitulos = listadoTitulos + listadoResultado[k].es_title + "(";
+
+
+                buscaPosPropiedad(listadoResultado[k], process.env.RATING_FIELD, function (idPropiedad) {
+                    if (!(idPropiedad == undefined)) {
+                        listadoTitulos = listadoTitulos + "rating:" + listadoResultado[k].ibmsc_field[idPropiedad]['#text'];
+                    }
+                });
+
+                var id;
+                buscaPosPropiedad(listadoResultado[k], process.env.YEAR_FIELD, function (idPropiedad) {
+                    if (!(idPropiedad == undefined)) {
+                        listadoTitulos = listadoTitulos + " year:" + listadoResultado[k].ibmsc_field[idPropiedad]['#text'];
+                    }
+
+                });
+
+                var id;
+                buscaPosPropiedad(listadoResultado[k], process.env.GENRE_FIELD, function (idPropiedad) {
+                    if (!(idPropiedad == undefined)) {
+                        listadoTitulos = listadoTitulos + " genre:" + listadoResultado[k].ibmsc_field[idPropiedad]['#text'];
+                    }
+
+                });
+
+                listadoTitulos = listadoTitulos + ") <br>";
+            }
+    }
+    resultado.numElementos=listadoResultado.length;
+    resultado.listadoTitulos=listadoTitulos;
+    return resultado;
+}
+
+function peticionClienteAndroid(req, res) {
 
     var output;
     var modoCliente = false;
@@ -140,42 +272,32 @@ function orquestador(req, res) {
             }
         });
     }
-
+    var frase = req.body.frase || req.query.frase ;
+    console.info("El valor de la frase <"+req.body.frase +">");
+    console.info("El valor de la frase <"+req.query.frase +">");
     // Comprobamos que no venga vacía, y si es así la inicializamos        
-    if (typeof req.query.frase == 'undefined' && req.query.frase == null) {
-        req.query.frase = '';
+    if (frase == 'undefined' || frase == null) {
+        frase = '';
         contexto = new Object;
     }
-
-    var response = "<HEAD>" +
-        "<title>Cognitive TV Vodafone Dummy Agent</title>\n" +
-        "</HEAD>\n" +
-        "<BODY>\n" +
-        "<P><strong><big><big><a href=\"/testClienteAndroid\">Cliente Android</a></big></big></strong></P>" +
-        "<FORM action=\"/testClienteAndroid\" method=\"get\">\n" +
-        "<P>\n" +
-        "<table  border=1 cellspacing=0 cellpading=0>" +
-        "<tr><td width=120 align='right'><strong>Anterior entrada </strong></td><td> <INPUT readonly size=\"120\" style =\"color: #888888; background-color: #DDDDDD;\" type=\"text\"  value=\"" + req.query.frase + "\"></td > </tr>" +
-        "</P>\n" +
-        "</FORM>\n";
-
-    // Modo cliente o mode web
-
-    if (!(typeof req.query.modoCliente == 'undefined' && req.query.modoCliente == null)) {
-        modoCliente = true;
-    }
+    console.info("El valor de la frase <"+frase +">");
 
     // Aplicamos stopwords
     var sw = require('stopword');
     var rawInput=req.query.frase;
-    const oldString = req.query.frase.split(' ');
+    const oldString = frase.split(' ');
     console.log("antes:" + oldString);
-    req.query.frase = sw.removeStopwords(oldString, sw.es);
-    console.log("despues:", req.query.frase);
+    frase = sw.removeStopwords(oldString, sw.es);
+    console.log("despues:", frase);
 
     // Convertimos a String y eliminamos las , que introduce la conversión a array
-    entrada.text = req.query.frase.toString();
+    entrada.text = frase.toString();
     entrada.text = entrada.text.replace(/,/g, ' ');
+    // Estableciendo variables en el contexto
+	contexto.numPalabrasEntradaRaw=oldString.length;
+	contexto.numPalabrasEntrada=entrada.text.split(' ').length;
+	
+	console.info("Contexto en el body al estilo:"+JSON.stringify(req.body.contexto));
 
     var payload = {
         workspace_id: workspace,
@@ -206,21 +328,6 @@ function orquestador(req, res) {
 
             output = data.output.text;
             console.log("output conversation:" + output);
-            response = response + "<tr><td align='right'><strong>Salida Cliente</strong></td><td>" + output + "</td></tr>";
-            response = response + "<tr><td align='right'><strong>Entrada Cliente</strong></td><td align ='right'><big> <INPUT size=\"120\" style =\" font-size: large; background-color: #99CCFF;\" type=\"text\" name=\"frase\" value=\"\" autofocus></big><br> " +
-                "<INPUT type=\"submit\" style=\"font-size: larger;\"  value=\"Enviar al orquestador\"></td></tr></table><br><br>";
-            response = response + "<P><strong><big><big>Watson Conversations</big></big></strong></P>" + "<table width=500 border=1 cellspacing=0 cellpading=0>";
-            response = response + "<tr><td><strong>genres</strong></td><td>" + data.context.genres + "</td></tr>";
-            response = response + "<tr><td width=200><strong>show_type</strong></td><td width=300>" + data.context.show_type + "</td></tr>";
-            response = response + "<tr><td><strong>titulo</strong></td><td>" + data.context.titulo + "</td></tr>";
-            response = response + "<tr><td><strong>cast</strong></td><td>" + data.context.cast + "</td></tr>";
-            response = response + "<tr><td><strong>director</strong></td><td>" + data.context.director + "</td></tr>";
-            response = response + "<tr><td><strong>novedades</strong></td><td>" + data.context.novedades + "</td></tr>";
-            response = response + "<tr><td><strong>valoracion</strong></td><td>" + data.context.valoracion + "</td></tr>";
-            response = response + "<tr><td><strong>es_totalResults</strong></td><td>" + data.context.es_totalResults + "</td></tr>";            
-            response = response + "<tr><td><strong>Lanzar búsqueda WEX</strong></td><td>" + data.context.Busqueda_WEX + "</td></tr>";
-            response = response + "</table>";
-
             // TODO: Meter en un bucle con las propiedades en un array             
             //var parametrosBusqueda = "NOT(show_type:Series)";
             var parametrosBusqueda = "";
@@ -229,6 +336,7 @@ function orquestador(req, res) {
 
            // console.log("Contexto en json:" +res.json(data.context));
 
+            console.log("contexto al principio *********** :" + JSON.stringify(data.context));
             var genres = data.context.genres;
             var show_type = data.context.show_type;
             var title = data.context.titulo;
@@ -286,9 +394,7 @@ function orquestador(req, res) {
             contexto = data.context;
             console.log("contexto antes :" + JSON.stringify(contexto));
             
-            // Estableciendo variables en el contexto
-        	contexto.numPalabrasEntradaRaw=oldString.length;
-        	contexto.numPalabrasEntrada=entrada.text.split(' ').length;
+
         	if (output =='Perfecto, te muestro lo que he encontrado, si quieres seguimos buscando.') {
         		delete contexto.titulo;
         	}        	
@@ -321,114 +427,23 @@ function orquestador(req, res) {
                     
 
                     console.log("WEX resultados:" + datos.es_totalResults);
-                    if (modoCliente) {
-
-                        res.send(datos);
-                    }
-
-                    else {
-
-                        response = response + "<P><strong><big><big>Resultados WEX </big></big></strong></P>" + "<table width=800 border=1 cellspacing=0 cellpading=0>";
-                        response = response + "<tr><td width=100><strong>Número de resultados</strong></td><td width=600>" + datos.es_totalResults + "</td></tr>";
-                        response = response + "<tr><td><strong>es_evaluationTruncation</strong></td><td width=300>" + datos.es_evaluationTruncation + "</td></tr>";
-                        response = response + "<tr><td><strong>es_queryEvaluationTime</strong></td><td width=300>" + datos.es_queryEvaluationTime + "</td></tr>";
-                        response = response + "<tr><td><strong>es_totalResultsType</strong></td><td width=300>" + datos.es_totalResultsType + "</td></tr>";
-                        response = response + "<tr><td><strong>es_numberOfAvailableResults</strong></td><td width=300>" + datos.es_numberOfAvailableResults + "</td></tr>";
-                        response = response + "<tr><td><strong>es_numberOfEstimatedResults</strong></td><td width=300>" + datos.es_numberOfEstimatedResults + "</td></tr>";
-                        response = response + "<tr><td><strong>filtros de la query</strong></td><td width=300>" + datos.es_query[0].searchTerms + "</td></tr>";
-                        response = response + "<tr><td><strong>orden de la query</strong></td><td width=300>" + orden + "</td></tr>";
-
-
-                        if (!(datos.es_result == undefined)) {
-
-
-                            var listadoTitulos = "";
-                            var idPropiedad;
-                            var listadoResultado=[];
-                            
-                            if (datos.es_result.length > 1) {
-                            	listadoResultado = datos.es_result;
-                            } else {
-                            	listadoResultado = [datos.es_result]
-                            }
-
-                                response = response + "<tr><td><strong>respuestas devueltas</strong></td><td width=300>" + listadoResultado.length + "</td></tr>";
-
-                                for (var k = 0; k < listadoResultado.length; k++) {
-
-                                    listadoTitulos = listadoTitulos + listadoResultado[k].es_title + "(";
-
-
-                                    buscaPosPropiedad(listadoResultado[k], process.env.RATING_FIELD, function (idPropiedad) {
-                                        if (!(idPropiedad == undefined)) {
-                                            listadoTitulos = listadoTitulos + "rating:" + listadoResultado[k].ibmsc_field[idPropiedad]['#text'];
-                                        }
-                                    });
-
-                                    var id;
-                                    buscaPosPropiedad(listadoResultado[k], process.env.YEAR_FIELD, function (idPropiedad) {
-                                        if (!(idPropiedad == undefined)) {
-                                            listadoTitulos = listadoTitulos + " year:" + listadoResultado[k].ibmsc_field[idPropiedad]['#text'];
-                                        }
-
-                                    });
-
-                                    var id;
-                                    buscaPosPropiedad(listadoResultado[k], process.env.GENRE_FIELD, function (idPropiedad) {
-                                        if (!(idPropiedad == undefined)) {
-                                            listadoTitulos = listadoTitulos + " genre:" + listadoResultado[k].ibmsc_field[idPropiedad]['#text'];
-                                        }
-
-                                    });
-
-                                    listadoTitulos = listadoTitulos + ") <br>";
-                                }
-                            response = response + "<tr><td><strong>Títulos devueltos en llamada</strong></td><td width=300><small>" + listadoTitulos + "</small></td></tr>";
-                            response = response + "</table>";                        
-                            response = response + "</BODY > ";
-                            res.send(response);
-                        } else {
-                            response = response + "</BODY > ";
-                            res.send(response);
-                        }
-                    }
-
-
-
-
-
+                        //res.send(datos);
+                    devuelveDatos(req,res,datos);
                 });
-
-
             }
             else {
-
-
-
-
-                if (modoCliente) {
-                    var responseConversation = {
-                        input : data.input.text,
-                        output : data.output.text,
-                        context: data.context,
-                        es_result : [],
-                        llamadaWEX : false                    
-                    }
-
-                    //res.send(data);                    
-                    console.log("### RESPONSE FROM CONVERSATION :: " , responseConversation);
-                    res.send(responseConversation);                    
+                var responseConversation = {
+                    input : data.input.text,
+                    output : data.output.text,
+                    context: data.context,
+                    es_result : [],
+                    llamadaWEX : false                    
                 }
 
-                else {
-
-                    response = response + "</BODY > ";
-                    res.send(response);
-                }
-
-                // return (response);
-                //return res.json(updateMessage(payload, data));
-
+                //res.send(data);                    
+                console.log("### RESPONSE FROM CONVERSATION :: " , responseConversation);
+                //res.send(responseConversation);
+                devuelveDatos(req,res,responseConversation);
             }
         }
 

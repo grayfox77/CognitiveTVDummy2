@@ -370,7 +370,7 @@ function peticionClienteAndroid(req, res) {
             }
 
             if ((novedades == process.env.ULTIMAS_NOVEDADES) && (valoracion == process.env.MEJOR_VALORADAS)) {
-                novedades = process.env.ULTIMAS_NOVEDADES_VALUE;
+                //novedades = process.env.ULTIMAS_NOVEDADES_VALUE;
                 parametrosOrdenacion = parametrosOrdenacion + process.env.ORDER_MEJOR_VALORADAS;
                 orden = "valoradas";
 
@@ -378,25 +378,30 @@ function peticionClienteAndroid(req, res) {
 
 
             if ("novedades" == novedades) {
-                parametrosBusqueda = agregarParametroBusq(parametrosBusqueda,"year","2017");
+                parametrosBusqueda = agregarParametroBusq(parametrosBusqueda,"year:","2017");
             }
 
+            parametrosBusqueda = agregarParametroBusq(parametrosBusqueda,"title:",title);
+            parametrosBusqueda = agregarParametroBusq(parametrosBusqueda,"genres:",genres);
+            parametrosBusqueda = agregarParametroBusq(parametrosBusqueda,"show_type:",show_type);
+            parametrosBusqueda = agregarParametroBusq(parametrosBusqueda,"cast:",cast);
+            parametrosBusqueda = agregarParametroBusq(parametrosBusqueda,"director:",director);
 
-
-
-            parametrosBusqueda = agregarParametroBusq(parametrosBusqueda,"title",title);
-            parametrosBusqueda = agregarParametroBusq(parametrosBusqueda,"genres",genres);
-            parametrosBusqueda = agregarParametroBusq(parametrosBusqueda,"show_type",show_type);
-            parametrosBusqueda = agregarParametroBusq(parametrosBusqueda,"cast",cast);
-            parametrosBusqueda = agregarParametroBusq(parametrosBusqueda,"director",director);
+            // TODO Que se utiliza el que nosotros tenemos y hemos enviado o la variable de conversation 
+            console.log('El input_text devuelto es:'+data.context.input_text);
+            console.log('El input_text devuelto es:'+JSON.stringify(data.context.input_text));
             
-//            console.log('El input_text devuelto es:'+data.context.input_text);
-//            var palabrasEntrada =[];
-//            if (data.context.input_text != null) {
-//            	palabrasEntrada=data.context.input_text.split(' ');
-//            }
-//            var input_text_filtrado=sw.removeStopwords(palabrasEntrada, sw.es);
-//            parametrosBusqueda = agregarParametroBusq(parametrosBusqueda,"input_text",input_text_filtrado);
+            
+            var palabrasEntrada = [];
+            
+            if (typeof data.context.input_text == 'string') {
+            	palabrasEntrada = data.context.input_text.split(' ');
+            }
+            
+            var arrEntrada_filtrado=sw.removeStopwords(palabrasEntrada, sw.es);
+            var filtroInputEntrada = arrEntrada_filtrado.toString();
+            filtroInputEntrada=filtroInputEntrada.replace(/,/g, ' ');
+            parametrosBusqueda = agregarParametroBusq(parametrosBusqueda,"",filtroInputEntrada);
 
             var lanzar_busqueda_wex = false;
 
@@ -445,7 +450,7 @@ function peticionClienteAndroid(req, res) {
                     var entrada2 = {"text":"ActualizandoContextoOrquestador"};
                     payload.input = entrada2;
                     payload.context = datos.context;
-                    console.info("Mensaje a conversation:",JSON.stringify(payload));
+                    console.info("Mensaje 2 a conversation:",JSON.stringify(payload));
                     conversation.message(payload, function (err, data2) {
                     	//console.log("Segunda llamada a conversation:"+JSON.stringify(data2));
                     	//console.log("Segunda llamada a conversation:"+JSON.stringify(err));
@@ -541,7 +546,7 @@ function agregarParametroBusq(parametrosBusqueda,campo,valor) {
 	
 	    	strAuxiliar = strAuxiliar + " AND ";
 	    }
-	    return strAuxiliar + campo+":" + valor;
+	    return strAuxiliar + campo + valor;
 	} else {
 		return parametrosBusqueda;
 	}

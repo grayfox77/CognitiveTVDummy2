@@ -377,12 +377,8 @@ function peticionClienteAndroid(req, res) {
             }
 
 
-            if (!(novedades == null)) {
-                if (parametrosBusqueda.length > 0) {
-
-                    parametrosBusqueda = parametrosBusqueda + " AND ";
-                }
-                parametrosBusqueda = parametrosBusqueda + novedades;
+            if ("novedades" == novedades) {
+                parametrosBusqueda = agregarParametroBusq(parametrosBusqueda,"year","2017");
             }
 
 
@@ -393,6 +389,14 @@ function peticionClienteAndroid(req, res) {
             parametrosBusqueda = agregarParametroBusq(parametrosBusqueda,"show_type",show_type);
             parametrosBusqueda = agregarParametroBusq(parametrosBusqueda,"cast",cast);
             parametrosBusqueda = agregarParametroBusq(parametrosBusqueda,"director",director);
+            
+//            console.log('El input_text devuelto es:'+data.context.input_text);
+//            var palabrasEntrada =[];
+//            if (data.context.input_text != null) {
+//            	palabrasEntrada=data.context.input_text.split(' ');
+//            }
+//            var input_text_filtrado=sw.removeStopwords(palabrasEntrada, sw.es);
+//            parametrosBusqueda = agregarParametroBusq(parametrosBusqueda,"input_text",input_text_filtrado);
 
             var lanzar_busqueda_wex = false;
 
@@ -439,10 +443,13 @@ function peticionClienteAndroid(req, res) {
                     console.log("WEX resultados:" + datos.es_totalResults);
                         //res.send(datos);
                     var entrada2 = {"text":"ActualizandoContextoOrquestador"};
-                    payload.input = entrada2; 
+                    payload.input = entrada2;
+                    payload.context = datos.context;
+                    console.info("Mensaje a conversation:",JSON.stringify(payload));
                     conversation.message(payload, function (err, data2) {
-                    	console.log("Segunda llamada a conversation:"+JSON.stringify(data2));
-                    	console.log("Segunda llamada a conversation:"+JSON.stringify(err));
+                    	//console.log("Segunda llamada a conversation:"+JSON.stringify(data2));
+                    	//console.log("Segunda llamada a conversation:"+JSON.stringify(err));
+                    	console.log("Se ha llamado al conversation la segunda vez y ha devuelto:"+data2.output.text)
                     	datos.output = data2.output.text;
                     	devuelveDatos(req,res,datos);
                     });

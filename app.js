@@ -144,6 +144,7 @@ function entradaPrincipal(req,res) {
  * @returns
  */
 function devuelveDatos(req,res,datos) {
+	console.info("Contexto Final ---->:"+JSON.stringify(datos.context));
     if (!(typeof req.query.modoCliente == 'undefined' && req.query.modoCliente == null)) {
         res.send(datos);
     } else {
@@ -157,6 +158,7 @@ function escapeJSON(datos) {
 }
 function aplicacionDummy(req,res,datosClienteAndroid) {
 	//console.info("Datos cliente android:"+JSON.stringify(datosClienteAndroid));
+	console.info("Sirviendo peticion aplicacion Dummy");
 	var frase = req.query.frase || req.body.frase;
     if (frase == 'undefined' || frase == null) {
         frase = '';
@@ -288,7 +290,7 @@ function peticionClienteAndroid(req, res) {
     var rawInput=req.query.frase;
     const oldString = frase.split(' ');
     console.log("antes:" + oldString);
-    frase = sw.removeStopwords(oldString, sw.es);
+    //frase = sw.removeStopwords(oldString, sw.es);
     console.log("despues:", frase);
 
     // Convertimos a String y eliminamos las , que introduce la conversión a array
@@ -299,10 +301,13 @@ function peticionClienteAndroid(req, res) {
 	console.info("Contexto en el body al estilo:"+JSON.stringify(req.body.context));
 	var paramContext ={};
 	if (req.body.context) {
+		console.info('El tipo del context'+(typeof req.body.context));
 		if (typeof req.body.context == 'string') {
 			paramContext = JSON.parse(req.body.context);
+			console.info("El contexto recien parseado"+JSON.stringify(paramContext));
 		} else if (typeof req.body.context == 'object'){
 			paramContext = req.body.context;
+			console.info("El contexto recien parseado modo apk"+JSON.stringify(paramContext));
 		} 
 	}
     var payload = {
@@ -433,7 +438,14 @@ function peticionClienteAndroid(req, res) {
 
                     console.log("WEX resultados:" + datos.es_totalResults);
                         //res.send(datos);
-                    devuelveDatos(req,res,datos);
+                    var entrada2 = {"text":"ActualizandoContextoOrquestador"};
+                    payload.input = entrada2; 
+                    conversation.message(payload, function (err, data2) {
+                    	console.log("Segunda llamada a conversation:"+JSON.stringify(data2));
+                    	console.log("Segunda llamada a conversation:"+JSON.stringify(err));
+                    	datos.output = data2.output.text;
+                    	devuelveDatos(req,res,datos);
+                    });
                 });
             }
             else {

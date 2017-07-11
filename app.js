@@ -111,6 +111,7 @@ app.get('/testClienteAndroid', function (req, res) {
 app.get('/paginator', function (req, res) {
 
     console.log("En función paginator");
+    // http://localhost:3000/paginator?parametrosBusqueda=show_type:Cine&parametrosOrdenacion=&pagina=2
     funciones_wex.request(req.query.parametrosBusqueda, req.query.parametrosOrdenacion, req.query.pagina, function (datos) {
 
         console.log("WEX resultados:" + datos.es_totalResults);
@@ -145,9 +146,13 @@ function entradaPrincipal(req,res) {
  */
 function devuelveDatos(req,res,datos) {
 	console.info("Contexto Final ---->:"+JSON.stringify(datos.context));
+	//res.charset='ISO-8859-1';
     if (!(typeof req.query.modoCliente == 'undefined' && req.query.modoCliente == null)) {
+    	//res.set({ 'Content-Type': 'application/json; charset=utf-8' })
         res.send(datos);
     } else {
+    	//res.set({ 'Content-Type': 'text/html; charset=iso-8859-1' })
+    	//res.setHeader("Content-Type", "text/html; charset=iso-8859-1");
     	aplicacionDummy(req,res,datos);
     }		
 }
@@ -166,14 +171,15 @@ function aplicacionDummy(req,res,datosClienteAndroid) {
     }	
     var response = "<HEAD>" +
     "<title>Cognitive TV Vodafone Dummy Agent</title>\n" +
+    "<link rel=\"stylesheet\" href=\"css/app.css\">\n " +
     "</HEAD>\n" +
-    "<BODY>\n" +
+    "<BODY onload='displayPayload()' >\n" +
     "<P><strong><big><big><a href=\"/testClienteAndroid\">Cliente Android</a></big></big></strong></P>" +
     "<FORM action=\"/testClienteAndroid\" method=\"post\">\n" +
     "<P>\n" +
     "<table  border=1 cellspacing=0 cellpading=0>" +
     "<tr><td width=120 align='right'><strong>Anterior entrada </strong></td><td><INPUT readonly size=\"120\" style =\"color: #888888; background-color: #DDDDDD;\" type=\"text\"  value=\"" + frase + "\">" +
-    "<INPUT name=\"context\" type=\"hidden\" size=\"120\" style =\"color: #888888; background-color: #DDDDDD;\" type=\"text\"  value='" + escapeJSON(datosClienteAndroid.context) + "'></td > </tr>" +
+    "<INPUT id = \"hiddenContext\" name=\"context\" type=\"hidden\" size=\"120\" style =\"color: #888888; background-color: #DDDDDD;\" type=\"text\"  value='" + escapeJSON(datosClienteAndroid.context) + "'></td > </tr>" +
     "</P>\n" +
     "</FORM>\n";
     response = response + "<tr><td align='right'><strong>Salida Cliente</strong></td><td>" + datosClienteAndroid.output + "</td></tr>";
@@ -207,6 +213,10 @@ function aplicacionDummy(req,res,datosClienteAndroid) {
 	    response = response + "<tr><td><strong>Títulos devueltos en llamada</strong></td><td width=300><small>" + resTitulos.listadoTitulos + "</small></td></tr>";
 	    response = response + "</table>";
     }
+    //response = response + "<div>"+escapeJSON(datosClienteAndroid.context)+"</div> ";
+    response = response + "<div id=\"payload-response\" class=\"payload\"></div> ";
+    response = response + "<script src=\"js/common.js\"></script>";
+    response = response + "<script src=\"js/printContext.js\"></script>";
     response = response + "</BODY > ";
     res.send(response);
 }
@@ -260,6 +270,19 @@ function listadoTitulos(result) {
     resultado.numElementos=listadoResultado.length;
     resultado.listadoTitulos=listadoTitulos;
     return resultado;
+}
+
+function limpiarSimbolos(cadena) {
+	var res=cadena;
+	res=res.replace(/[¿\?:!¡.,\(\)\[\]"']/g,' ');
+	var resInicial = res;
+	while (resInicial != resInicial.replace(/  /g,' ')) {
+		resInicial=resInicial.replace(/  /g,' ');
+	}
+	res=resInicial.trim();
+	console.info("Limpiando simbolos de: " +cadena);
+	console.info(res);
+	return res;
 }
 
 function peticionClienteAndroid(req, res) {
@@ -395,7 +418,7 @@ function peticionClienteAndroid(req, res) {
             var palabrasEntrada = [];
             
             if (typeof data.context.input_text == 'string') {
-            	palabrasEntrada = data.context.input_text.split(' ');
+            	palabrasEntrada = limpiarSimbolos(data.context.input_text).split(' ');
             }
             
             var arrEntrada_filtrado=sw.removeStopwords(palabrasEntrada, sw.es);

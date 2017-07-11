@@ -475,11 +475,13 @@ function peticionClienteAndroid(req, res) {
                     var entrada2 = {"text":"ActualizandoContextoOrquestador"};
                     payload.input = entrada2;
                     payload.context = datos.context;
-                    console.info("Mensaje 2 a conversation:",JSON.stringify(payload));
+                    //console.info("Mensaje 2 a conversation:",JSON.stringify(payload));
                     conversation.message(payload, function (err, data2) {
                     	//console.log("Segunda llamada a conversation:"+JSON.stringify(data2));
                     	//console.log("Segunda llamada a conversation:"+JSON.stringify(err));
-                    	console.log("Se ha llamado al conversation la segunda vez y ha devuelto:"+data2.output.text)
+                    	//console.log("Se ha llamado al conversation la segunda vez y ha devuelto:"+data2.output.text)
+                    	console.info(JSON.stringify(data2.context));
+                    	datos.context = data2.context;
                     	datos.output = data2.output.text;
                     	devuelveDatos(req,res,datos);
                     });

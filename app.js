@@ -214,7 +214,7 @@ function aplicacionDummy(req,res,datosClienteAndroid) {
 	    response = response + "</table>";
     }
     //response = response + "<div>"+escapeJSON(datosClienteAndroid.context)+"</div> ";
-    response = response + "<div id=\"payload-response\" class=\"payload\"></div> ";
+    response = response + "<br><div id=\"payload-response\" class=\"payload\"></div> ";
     response = response + "<script src=\"js/common.js\"></script>";
     response = response + "<script src=\"js/printContext.js\"></script>";
     response = response + "</BODY > ";

@@ -400,8 +400,10 @@ function peticionClienteAndroid(req, res) {
             
             var arrEntrada_filtrado=sw.removeStopwords(palabrasEntrada, sw.es);
             var filtroInputEntrada = arrEntrada_filtrado.toString();
-            filtroInputEntrada=filtroInputEntrada.replace(/,/g, ' ');
-            parametrosBusqueda = agregarParametroBusq(parametrosBusqueda,"",filtroInputEntrada);
+            filtroInputEntrada=filtroInputEntrada.replace(/,/g, ' OR ');
+        	if (filtroInputEntrada != null && '' != filtroInputEntrada ) { 
+        		parametrosBusqueda = agregarParametroBusq(parametrosBusqueda,"","("+filtroInputEntrada+")");
+        	}
 
             var lanzar_busqueda_wex = false;
 

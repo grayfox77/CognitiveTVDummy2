@@ -135,6 +135,7 @@ app.post('/paginator', function (req, res) {
 
 
 function entradaPrincipal(req,res) {
+	console.info("--->Recibido una nueva petición")
         peticionClienteAndroid(req, res);
 }
 /**
@@ -145,7 +146,7 @@ function entradaPrincipal(req,res) {
  * @returns
  */
 function devuelveDatos(req,res,datos) {
-	console.info("Contexto Final ---->:"+JSON.stringify(datos.context));
+	console.info("<-----Contexto Final:"+JSON.stringify(datos.context));
 	//res.charset='ISO-8859-1';
     if (!(typeof req.query.modoCliente == 'undefined' && req.query.modoCliente == null)) {
     	//res.set({ 'Content-Type': 'application/json; charset=utf-8' })
@@ -274,14 +275,10 @@ function listadoTitulos(result) {
 
 function limpiarSimbolos(cadena) {
 	var res=cadena;
-	res=res.replace(/[¿\?:!¡.,\(\)\[\]"']/g,' ');
-	var resInicial = res;
-	while (resInicial != resInicial.replace(/  /g,' ')) {
-		resInicial=resInicial.replace(/  /g,' ');
-	}
-	res=resInicial.trim();
-	console.info("Limpiando simbolos de: " +cadena);
-	console.info(res);
+	res=res.replace(/[¿\?:!¡.,\(\)\[\]"';_+\-{}<>$&\/]/g,' ');
+	res=res.replace(/ +/g,' ');
+	res=res.trim();
+	console.info("Cadena limpiada: " +cadena);
 	return res;
 }
 
@@ -299,8 +296,6 @@ function peticionClienteAndroid(req, res) {
         });
     }
     var frase = req.body.frase || req.query.frase ;
-    console.info("El valor de la frase <"+req.body.frase +">");
-    console.info("El valor de la frase <"+req.query.frase +">");
     // Comprobamos que no venga vacía, y si es así la inicializamos        
     if (frase == 'undefined' || frase == null) {
         frase = '';
@@ -312,9 +307,6 @@ function peticionClienteAndroid(req, res) {
     var sw = require('stopword');
     var rawInput=req.query.frase;
     const oldString = frase.split(' ');
-    console.log("antes:" + oldString);
-    //frase = sw.removeStopwords(oldString, sw.es);
-    console.log("despues:", frase);
 
     // Convertimos a String y eliminamos las , que introduce la conversión a array
     entrada.text = frase.toString();
@@ -338,15 +330,18 @@ function peticionClienteAndroid(req, res) {
         context: paramContext,
         input: entrada || {}
     };
+    console.info("El contexto de entrada es:"+JSON.stringify(paramContext));
 
 
     payload.context.numPalabrasEntradaRaw=oldString.length;
     payload.context.numPalabrasEntrada=entrada.text.split(' ').length;
 
 
-    console.info("Payload:"+JSON.stringify(payload));
+    //console.info("Payload:"+JSON.stringify(payload));
     // Send the input to the conversation service
+    console.info("Se realiza la primera llamada a Conversation");
     conversation.message(payload, function (err, data) {
+    	console.log("Callback primera llamada a conversation.");
     	var idLog = null;     	
         if (err) {
             console.log("por error");
@@ -354,7 +349,7 @@ function peticionClienteAndroid(req, res) {
         }
         else {
        	
-            console.log("salida:" + data);
+            //console.log("salida:" + data);
             if (logDDBB) {
                 // If the logs db is set, then we want to record all input and responses 
             	idLog = uuid.v4(); 
@@ -363,7 +358,7 @@ function peticionClienteAndroid(req, res) {
             //console.log("por allá:" + data.intents[0].confidence);
 
             output = data.output.text;
-            console.log("output conversation:" + output);
+            //console.log("output conversation:" + output);
             // TODO: Meter en un bucle con las propiedades en un array             
             //var parametrosBusqueda = "NOT(show_type:Series)";
             var parametrosBusqueda = "";
@@ -411,10 +406,6 @@ function peticionClienteAndroid(req, res) {
             parametrosBusqueda = agregarParametroBusq(parametrosBusqueda,"director:",director);
 
             // TODO Que se utiliza el que nosotros tenemos y hemos enviado o la variable de conversation 
-            console.log('El input_text devuelto es:'+data.context.input_text);
-            console.log('El input_text devuelto es:'+JSON.stringify(data.context.input_text));
-            
-            
             var palabrasEntrada = [];
             
             if (typeof data.context.input_text == 'string') {
@@ -444,39 +435,34 @@ function peticionClienteAndroid(req, res) {
         	if (output =='Perfecto, te muestro lo que he encontrado, si quieres seguimos buscando.') {
         		delete data.context.titulo;
         	}        	
-            console.log("Contexto en despues:" + JSON.stringify(data.context));
         	
         	
             if (lanzar_busqueda_wex) {
-
+            	console.info("Se realiza la llamada a Wex");
 
                 funciones_wex.request(parametrosBusqueda, parametrosOrdenacion, 1, function (datos) { //Uso de la funcion request construida en wex.js o similar, recibe los datos en callback "datos"
 
-                    //datos = parseResponse(datos);
                     console.log("Callback llamada wex:");
                     datos.input = entrada.text;
                     datos.output = data.output.text;
                     data.context.es_totalResults = datos.es_totalResults;
-                    console.log("Estableciendo en el contexto el numero de resultado:"+datos.es_totalResults);
                     datos.context = data.context;
                     datos.context.es_totalResults = datos.es_totalResults;
-
-                    console.log("parametrosBusqueda=" + parametrosBusqueda);
-                    console.log("parametrosOrdenacion=" + parametrosOrdenacion);
-                    console.log("pagina=" + 1);
 
                     datos.parametrosBusqueda = parametrosBusqueda;
                     datos.parametrosOrdenacion = parametrosOrdenacion;
                     datos.pagina = 1;
                     
 
-                    console.log("WEX resultados:" + datos.es_totalResults);
+                    console.log("WEX total resultados:" + datos.es_totalResults);
                         //res.send(datos);
                     var entrada2 = {"text":"ActualizandoContextoOrquestador"};
                     payload.input = entrada2;
                     payload.context = datos.context;
                     //console.info("Mensaje 2 a conversation:",JSON.stringify(payload));
+                    console.info("Se realiza la segunda llamada a Conversation.");
                     conversation.message(payload, function (err, data2) {
+                    	console.info("Callback de la segunda llamada a Conversation.");
                     	//console.log("Segunda llamada a conversation:"+JSON.stringify(data2));
                     	//console.log("Segunda llamada a conversation:"+JSON.stringify(err));
                     	//console.log("Se ha llamado al conversation la segunda vez y ha devuelto:"+data2.output.text)
@@ -488,6 +474,7 @@ function peticionClienteAndroid(req, res) {
                 });
             }
             else {
+            	console.info("No se realiza la llamada a Wex.");
                 var responseConversation = {
                     input : data.input.text,
                     output : data.output.text,
@@ -497,7 +484,7 @@ function peticionClienteAndroid(req, res) {
                 }
 
                 //res.send(data);                    
-                console.log("### RESPONSE FROM CONVERSATION :: " , responseConversation);
+                //console.log("### RESPONSE FROM CONVERSATION :: " , responseConversation);
                 //res.send(responseConversation);
                 devuelveDatos(req,res,responseConversation);
             }
